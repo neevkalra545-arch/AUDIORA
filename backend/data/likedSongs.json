@@ -1,0 +1,13 @@
+[
+  {
+    "userId": "mqrnixm33cn0dq1p1yu",
+    "title": "Test Song",
+    "artist": "Test Artist",
+    "album": "Test Album",
+    "duration": 180,
+    "youtubeId": "test_yt_id_123",
+    "thumbnailUrl": "http://example.com/thumb.jpg",
+    "likedAt": "2026-06-24T05:47:32.315Z",
+    "_id": "mqrnixqzg4z3m2ly1ct"
+  }
+]

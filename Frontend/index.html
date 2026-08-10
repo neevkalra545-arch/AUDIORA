@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audiora - Premium Music Player & Lyric Finder</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
+    <!-- Auth Guard: redirect to login if no JWT token -->
+    <script>
+        (function () {
+            const token = localStorage.getItem('bs_token');
+            if (!token) { window.location.replace('login.html'); }
+        })();
+    </script>
+</head>
+
+<body>
+    <div class="app-layout">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <i class="fa-solid fa-compact-disc disc-logo"></i>
+                <span class="logo-text">Audiora</span>
+            </div>
+
+            <nav class="sidebar-menu">
+                <a href="#" class="nav-item active" data-view="home">
+                    <i class="fa-solid fa-house"></i>
+                    <span>Home</span>
+                </a>
+                <a href="#" class="nav-item" data-view="search">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <span>Search</span>
+                </a>
+                <a href="#" class="nav-item" data-view="lyrics">
+                    <i class="fa-solid fa-microphone-lines"></i>
+                    <span>Lyrics Sync</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-divider"></div>
+
+            <div class="library-section">
+                <div class="library-header">
+                    <div class="lib-title">
+                        <i class="fa-solid fa-book-open"></i>
+                        <span>Your Library</span>
+                    </div>
+                    <button class="add-playlist-btn" id="createPlaylistBtn" title="Create Playlist">
+                        <i class="fa-solid fa-plus"></i>
+                    </button>
+                </div>
+
+                <div class="library-items">
+                    <!-- Liked Songs Shortcut -->
+                    <div class="lib-item active-item" id="likedSongsShortcut" data-playlist-id="liked">
+                        <div class="playlist-art liked-gradient">
+                            <i class="fa-solid fa-heart"></i>
+                        </div>
+                        <div class="playlist-details">
+                            <span class="playlist-name">Liked Songs</span>
+                            <span class="playlist-meta">Auto Playlist</span>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Playlists will appear here -->
+                    <div id="playlistsContainer" class="playlists-scroll">
+                        <!-- Playlists list -->
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Panel Content -->
+        <main class="main-content">
+            <!-- Top Header Bar -->
+            <header class="main-header">
+                <div class="header-nav">
+                    <button class="nav-arrow-btn" id="navBack" title="Go Back">
+                        <i class="fa-solid fa-chevron-left"></i>
+                    </button>
+                    <button class="nav-arrow-btn" id="navForward" title="Go Forward">
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </button>
+                </div>
+
+                <div class="user-profile" id="userProfileArea">
+                    <div class="profile-avatar">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    <span class="profile-name" id="headerUserName">Guest User</span>
+                    <button id="logoutBtn" class="logout-btn" title="Sign Out">
+                        <i class="fa-solid fa-right-from-bracket"></i> Logout
+                    </button>
+                </div>
+            </header>
+
+            <div class="view-container">
+                <!-- 1. HOME VIEW -->
+                <section id="homeView" class="content-view active">
+                    <h2 class="view-title" id="greetingText">Good Evening 🌙</h2>
+
+                    <!-- Quick access: Liked Songs + dynamic playlist cards -->
+                    <div class="quick-grid-wrapper">
+                        <!-- Liked Songs pinned card -->
+                        <div class="quick-card liked-quick-card" id="likedSongsQuickCard" role="button" tabindex="0" title="Liked Songs">
+                            <div class="quick-art liked-gradient">
+                                <i class="fa-solid fa-heart"></i>
+                            </div>
+                            <div class="quick-card-info">
+                                <span class="quick-title">Liked Songs</span>
+                                <span class="quick-card-meta" id="likedSongsCount">0 songs</span>
+                            </div>
+                            <button class="quick-play-btn" title="Play Liked Songs" aria-label="Play Liked Songs">
+                                <i class="fa-solid fa-play"></i>
+                            </button>
+                        </div>
+                        <!-- Dynamic playlist cards injected by JS -->
+                        <div class="quick-grid" id="homePlaylistGrid"></div>
+                    </div>
+
+                    <!-- Trending Songs Section -->
+                    <div class="section-container">
+                        <h3 class="section-title">Trending Global Songs</h3>
+                        <div class="cards-grid" id="trendingSongsContainer">
+                            <!-- Injected by JS -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. SEARCH VIEW -->
+                <section id="searchView" class="content-view">
+                    <div class="search-header-container">
+                        <div class="large-search-bar">
+                            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                            <input type="text" id="searchInput" placeholder="Search by lyrics, title, or artist..."
+                                autocomplete="off">
+                            <button class="search-clear-btn" id="searchClearBtn"><i
+                                    class="fa-solid fa-xmark"></i></button>
+                        </div>
+                        <button class="search-trigger-btn" id="searchTriggerBtn">Search</button>
+                    </div>
+
+                    <!-- Paste-lyrics to find & play -->
+                    <div class="paste-lyrics-container">
+                        <h3 class="section-title paste-lyrics-title">Find a song by pasting lyrics</h3>
+
+                        <div class="paste-lyrics-form">
+                            <label for="lyricsPasteInput" class="paste-lyrics-label">Paste lyrics snippet</label>
+                            <textarea id="lyricsPasteInput" class="paste-lyrics-textarea"
+                                placeholder="e.g. 'Hello darkness my old friend'" rows="4"
+                                autocomplete="off"></textarea>
+
+                            <div class="paste-lyrics-actions">
+                                <button class="search-trigger-btn" id="lyricsPasteBtn" type="button">Search &
+                                    Preview</button>
+
+                                <div id="lyricsPasteLoading" class="search-loader hidden paste-lyrics-loading">
+                                    <div class="music-spinner paste-lyrics-spinner">
+                                        <div class="bar"></div>
+                                        <div class="bar"></div>
+                                        <div class="bar"></div>
+                                    </div>
+                                    <p>Finding matching songs...</p>
+                                </div>
+                            </div>
+
+                            <div id="lyricsPasteFeedback" class="paste-lyrics-feedback hidden" role="status"
+                                aria-live="polite"></div>
+                        </div>
+
+                        <div id="lyricsPasteResults" class="hidden paste-lyrics-results">
+                            <h3 class="panel-subtitle">Top matches</h3>
+                            <div class="tracks-list" id="lyricsPasteResultsContainer"></div>
+                        </div>
+                    </div>
+
+
+
+                    <!-- Loading Spinner -->
+                    <div id="searchLoading" class="search-loader hidden">
+                        <div class="music-spinner">
+                            <div class="bar"></div>
+                            <div class="bar"></div>
+                            <div class="bar"></div>
+                            <div class="bar"></div>
+                            <div class="bar"></div>
+                        </div>
+                        <p>Scanning global music databases...</p>
+                    </div>
+
+                    <!-- Search Results Layout -->
+                    <div class="search-results-layout hidden" id="searchResultsLayout">
+                        <div class="lyrics-match-panel">
+                            <h3 class="panel-subtitle">Lyrics Match</h3>
+                            <div class="lyrics-match-card" id="bestLyricCard">
+                                <!-- Featured lyric search result -->
+                                <div class="card-empty-state">
+                                    <i class="fa-solid fa-quote-right"></i>
+                                    <p>Select a result to preview lyrics snippet</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="songs-results-panel">
+                            <h3 class="panel-subtitle">Top Results</h3>
+                            <div class="tracks-list" id="searchResultsContainer">
+                                <!-- Search results tracks -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Search Suggestions / Categories -->
+                    <div id="searchCategories" class="search-categories">
+                        <h3 class="section-title">Try searching lyrics like...</h3>
+                        <div class="suggestion-pills">
+                            <button class="suggest-pill"
+                                onclick="triggerPresetSearch('I see trees of green red roses too')">"I see trees of
+                                green"</button>
+                            <button class="suggest-pill"
+                                onclick="triggerPresetSearch('Hello darkness my old friend')">"Hello darkness my old
+                                friend"</button>
+                            <button class="suggest-pill"
+                                onclick="triggerPresetSearch('Is this the real life or is this just fantasy')">"Is this
+                                the real life"</button>
+                            <button class="suggest-pill"
+                                onclick="triggerPresetSearch('Cause baby you are a firework')">"baby you are a
+                                firework"</button>
+                            <button class="suggest-pill" onclick="triggerPresetSearch('We dont talk about Bruno')">"We
+                                don't talk about Bruno"</button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. LYRICS VIEW (FULL SCREEN AMBIENT) -->
+                <section id="lyricsView" class="content-view">
+                    <div class="lyrics-ambient-bg" id="lyricsAmbientBg"></div>
+                    <div class="lyrics-view-container">
+                        <div class="lyrics-song-header">
+                            <img src="https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=150&q=80" alt="Album Art"
+                                id="lyricsSongArt" class="lyrics-album-art">
+                            <div class="lyrics-song-info">
+                                <h1 id="lyricsSongTitle">No Song Playing</h1>
+                                <p id="lyricsSongArtist">Play a song to view lyrics</p>
+                            </div>
+                        </div>
+
+                        <div class="lyrics-body" id="lyricsTextContainer">
+                            <!-- Scrollable lyrics -->
+                            <div class="lyrics-placeholder">
+                                <i class="fa-solid fa-microphone"></i>
+                                <p>Play a track and turn on Lyrics Sync to see lyrics here</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 4. PLAYLIST DETAILS VIEW -->
+                <section id="playlistView" class="content-view">
+                    <div class="playlist-header-banner" id="playlistHeaderBanner">
+                        <div class="playlist-banner-art" id="playlistBannerArt">
+                            <i class="fa-solid fa-music"></i>
+                        </div>
+                        <div class="playlist-banner-info">
+                            <span class="playlist-badge">PLAYLIST</span>
+                            <h1 class="playlist-banner-name" id="playlistBannerName">Playlist Name</h1>
+                            <p class="playlist-banner-description" id="playlistBannerDesc">Custom playlist created by
+                                Guest User</p>
+                            <div class="playlist-banner-meta">
+                                <span class="playlist-meta-author">Audiora</span>
+                                <span class="bullet-separator">•</span>
+                                <span class="playlist-meta-songs" id="playlistMetaCount">0 songs</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="playlist-actions-row">
+                        <button class="play-playlist-btn" id="playPlaylistBtn" title="Play All">
+                            <i class="fa-solid fa-play"></i>
+                        </button>
+                        <button class="ctrl-btn playlist-ctrl-btn" id="shufflePlaylistBtn" title="Shuffle">
+                            <i class="fa-solid fa-shuffle"></i>
+                        </button>
+                        <button class="ctrl-btn playlist-ctrl-btn" id="repeatPlaylistBtn" title="Repeat">
+                            <i class="fa-solid fa-repeat"></i>
+                        </button>
+                        <button class="delete-playlist-btn" id="deletePlaylistBtn" title="Delete Playlist">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+
+                    <!-- Tracklist Header -->
+                    <div class="tracklist-container">
+                        <div class="tracklist-header-row">
+                            <span class="track-col-num">#</span>
+                            <span class="track-col-title">TITLE</span>
+                            <span class="track-col-album">ALBUM</span>
+                            <span class="track-col-duration">TIME</span>
+                            <span class="track-col-actions"></span>
+                        </div>
+                        <div class="tracklist-rows" id="playlistTracksContainer">
+                            <!-- Injected dynamically -->
+                            <div class="playlist-empty-state">
+                                <i class="fa-regular fa-folder-open"></i>
+                                <p>No tracks in this playlist yet. Search and add tracks to get started!</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Bottom Music Player Bar -->
+    <footer class="player-bar">
+        <!-- Hidden YouTube Player Iframe -->
+        <div id="youtubePlayerContainer">
+            <div id="youtubePlayerDiv"></div>
+        </div>
+
+
+        <!-- Left: Song details -->
+        <div class="player-track-info">
+            <img src="https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=60&q=80" alt="Album Art" id="playerAlbumArt"
+                class="player-album-art">
+            <div class="player-song-details">
+                <span class="player-song-title" id="playerSongTitle">No Track Selected</span>
+                <span class="player-artist-name" id="playerArtistName">Select a track to start playing</span>
+            </div>
+            <button class="player-heart-btn" id="favoriteToggleBtn" title="Save to Liked Songs">
+                <i class="fa-regular fa-heart"></i>
+            </button>
+        </div>
+
+        <!-- Center: Playback controls & Seekbar -->
+        <div class="player-controls-panel">
+            <div class="control-buttons">
+                <button class="ctrl-btn" id="shuffleBtn" title="Shuffle"><i class="fa-solid fa-shuffle"></i></button>
+                <button class="ctrl-btn" id="prevBtn" title="Previous"><i
+                        class="fa-solid fa-backward-step"></i></button>
+                <button class="play-pause-btn" id="playPauseBtn" title="Play"><i class="fa-solid fa-play"></i></button>
+                <button class="ctrl-btn" id="nextBtn" title="Next"><i class="fa-solid fa-forward-step"></i></button>
+                <button class="ctrl-btn" id="repeatBtn" title="Repeat"><i class="fa-solid fa-repeat"></i></button>
+            </div>
+
+            <div class="seekbar-container">
+                <span class="time-label" id="currentTimeLabel">0:00</span>
+                <div class="progress-bar-wrapper">
+                    <input type="range" id="progressBar" class="seekbar" min="0" max="100" value="0">
+                    <div class="progressbar-fill" id="progressBarFill"></div>
+                </div>
+                <span class="time-label" id="totalTimeLabel">0:00</span>
+            </div>
+        </div>
+
+        <!-- Right: Utility controls -->
+        <div class="player-utility-panel">
+            <!-- Lyrics Toggle -->
+            <button class="utility-btn" id="lyricsToggleBtn" title="Lyrics Sync">
+                <i class="fa-solid fa-microphone-lines"></i>
+            </button>
+
+            <!-- Karaoke Voice Effect Toggle -->
+            <button class="utility-btn" id="karaokeToggleBtn" title="Karaoke Mode (Voice Effects)">
+                <i class="fa-solid fa-headset"></i>
+            </button>
+
+            <!-- Queue Toggle -->
+            <button class="utility-btn" id="queueToggleBtn" title="Queue">
+                <i class="fa-solid fa-list-ul"></i>
+            </button>
+
+            <!-- Volume Slider -->
+            <div class="volume-container">
+                <button class="utility-btn" id="volumeMuteBtn" title="Mute/Unmute">
+                    <i class="fa-solid fa-volume-high" id="volumeIcon"></i>
+                </button>
+                <div class="volume-slider-wrapper">
+                    <input type="range" id="volumeSlider" class="volume-slider" min="0" max="100" value="80">
+                    <div class="volume-fill" id="volumeBarFill"></div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Playlist Selector Modal (Add song to playlist popup) -->
+    <div class="modal-backdrop hidden" id="playlistModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add to Playlist</h3>
+                <button class="modal-close-btn" id="closePlaylistModal"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-playlists-list" id="modalPlaylistsList">
+                    <!-- Dynamic user playlists -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Playlist Dialog Modal -->
+    <div class="modal-backdrop hidden" id="createPlaylistModal">
+        <div class="modal-content small-modal">
+            <div class="modal-header">
+                <h3>Create New Playlist</h3>
+                <button class="modal-close-btn" id="closeCreateModal"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <label for="newPlaylistName">Playlist Name</label>
+                    <input type="text" id="newPlaylistName" placeholder="My Awesome Playlist..." autocomplete="off">
+                </div>
+                <div class="input-group">
+                    <label for="newPlaylistDesc">Description (Optional)</label>
+                    <input type="text" id="newPlaylistDesc" placeholder="Enter a description for this playlist"
+                        autocomplete="off">
+                </div>
+                <div class="modal-footer">
+                    <button class="cancel-modal-btn" id="cancelCreateBtn">Cancel</button>
+                    <button class="confirm-modal-btn" id="confirmCreateBtn">Create</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Side Queue Panel Overlay -->
+    <div class="queue-panel-backdrop hidden" id="queuePanel">
+        <div class="queue-panel-content">
+            <div class="queue-header">
+                <h3>Play Queue</h3>
+                <button class="queue-close-btn" id="closeQueueBtn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="queue-now-playing">
+                <span class="queue-section-label">Now Playing</span>
+                <div class="queue-item active" id="queueNowPlayingTrack">
+                    <!-- Now playing item info -->
+                </div>
+            </div>
+            <div class="queue-list-section">
+                <span class="queue-section-label">Next Up</span>
+                <div class="queue-items-container" id="queueItemsList">
+                    <!-- Next items list -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Karaoke Voice Effect Panel Overlay -->
+    <div class="queue-panel-backdrop hidden" id="karaokePanel">
+        <div class="queue-panel-content" style="width: 320px;">
+            <div class="queue-header">
+                <h3><i class="fa-solid fa-headset" style="margin-right: 8px;"></i> Karaoke Mode</h3>
+                <button class="queue-close-btn" id="closeKaraokeBtn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="karaoke-body" style="padding: 1.5rem; text-align: center;">
+                <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.5rem;">Sing along with
+                    real-time voice effects! (Wear headphones to avoid feedback loops)</p>
+
+                <button id="micEnableBtn" class="submit-btn" style="width: 100%; margin-bottom: 1.5rem;">
+                    <i class="fa-solid fa-microphone" style="margin-right: 8px;"></i> Enable Microphone
+                </button>
+
+                <div id="micControls" class="hidden" style="text-align: left;">
+                    <div
+                        style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.2rem; padding: 0.8rem; background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.3); border-radius: var(--radius-sm);">
+                        <span style="font-size: 0.9rem; font-weight: 500; color: var(--success);"><i
+                                class="fa-solid fa-microphone-lines" style="margin-right: 6px;"></i> Mic Active</span>
+                        <div class="music-spinner" style="transform: scale(0.6); margin: 0;">
+                            <div class="bar" style="background:var(--success);"></div>
+                            <div class="bar" style="background:var(--success);"></div>
+                            <div class="bar" style="background:var(--success);"></div>
+                        </div>
+                    </div>
+
+                    <label
+                        style="font-size: 0.85rem; color: var(--text-secondary); display: block; margin-bottom: 0.5rem; font-weight: 500;">Voice
+                        Effect</label>
+                    <select id="voiceEffectSelect"
+                        style="width: 100%; padding: 0.8rem; border-radius: var(--radius-sm); background: var(--input-bg); color: #fff; border: 1px solid var(--border); margin-bottom: 1rem; outline: none; font-family: inherit; font-size: 0.95rem;">
+                        <option value="normal" style="background: #111;">Normal (No Effect)</option>
+                        <option value="reverb" style="background: #111;">Studio Reverb</option>
+                        <option value="robot" style="background: #111;">Robot Voice</option>
+                        <option value="echo" style="background: #111;">Deep Echo</option>
+                        <option value="telephone" style="background: #111;">Telephone</option>
+                    </select>
+                </div>
+
+                <div id="micError" class="field-error hidden" style="justify-content: center; margin-top: 1rem;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auth Session: populate username and handle logout -->
+    <script>
+        (function () {
+            const user = JSON.parse(localStorage.getItem('bs_user') || 'null');
+            if (user) {
+                const el = document.getElementById('headerUserName');
+                if (el) el.textContent = user.name;
+            }
+            const logoutBtn = document.getElementById('logoutBtn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', function () {
+                    localStorage.removeItem('bs_token');
+                    localStorage.removeItem('bs_user');
+                    window.location.href = 'login.html';
+                });
+            }
+        })();
+    </script>
+    <script type="module">
+import { createClient } from "https://esm.sh/@supabase/supabase-js";
+
+const supabase = createClient(
+    "https://nnzplqorqgviuvuucvnf.supabase.co",
+    "sb_publishable_VdO9PpoViXRSbp_CrwPrzw_g0ycBfvP"
+);
+
+const { data, error } = await supabase
+    .from("users")
+    .select("*");
+
+console.log("Data:", data);
+console.log("Error:", error);
+</script>
+    <!-- Centralized Music Database (must load before script.js) -->
+    <script src="musicData.js"></script>
+    <!-- Main Application Script -->
+    <script src="script.js"></script>
+    <!-- Liked Songs quick card wiring (after DB loads) -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+          document.getElementById("playPauseBtn").addEventListener("click", togglePlayPause);
+
+document.getElementById("prevBtn").addEventListener("click", previousSong);
+
+document.getElementById("nextBtn").addEventListener("click", nextSong);
+
+document.getElementById("shuffleBtn").addEventListener("click", toggleShuffle);
+
+document.getElementById("repeatBtn").addEventListener("click", toggleRepeat);  
+            // Wire up liked songs quick card
+            var likedCard = document.getElementById('likedSongsQuickCard');
+            var likedCountEl = document.getElementById('likedSongsCount');
+            function updateLikedCount() {
+                var liked = JSON.parse(localStorage.getItem('audiora_liked_songs') || '[]');
+                if (likedCountEl) likedCountEl.textContent = liked.length + ' song' + (liked.length !== 1 ? 's' : '');
+            }
+            updateLikedCount();
+            if (likedCard) {
+                likedCard.addEventListener('click', function (e) {
+                    if (e.target.closest('.quick-play-btn')) {
+                        playLikedSongs();
+                    } else {
+                        loadPlaylistDetailsView('liked');
+                    }
+                });
+                likedCard.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter' || e.key === ' ') loadPlaylistDetailsView('liked');
+                });
+            }
+            // Wire playlist shuffle/repeat buttons
+            var shufflePlBtn = document.getElementById('shufflePlaylistBtn');
+            if (shufflePlBtn) shufflePlBtn.addEventListener('click', toggleShuffle);
+            var repeatPlBtn = document.getElementById('repeatPlaylistBtn');
+            if (repeatPlBtn) repeatPlBtn.addEventListener('click', toggleRepeat);
+        });
+    </script>
+</body>
+
+</html>
