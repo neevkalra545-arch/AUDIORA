@@ -170,28 +170,17 @@ app.use((err, req, res, next) => {
   });
 });
 
-// ── Start Server ──────────────────────────────────────────────────────────────
-const PORT = process.env.PORT || 3000;
-const server = app.listen(PORT, () => {
-  console.log("\n" + "=".repeat(60));
-  console.log("🎵 Audiora Server Started");
-  console.log("=".repeat(60));
-  console.log(`🌐 Server URL: http://localhost:${PORT}`);
-  console.log(`🔐 JWT Secret: ${process.env.JWT_SECRET ? "✅ Configured" : "❌ Not configured"}`);
-  console.log(`📧 Email Service: ${process.env.EMAIL_USER !== "your.gmail@gmail.com" ? "✅ Configured" : "⚠️  Not configured"}`);
-  console.log("🎨 Allowed Origins:", allowedOrigins);
-  console.log("=".repeat(60));
-  console.log("\nPress Ctrl+C to stop the server\n");
-});
-
-// ── Graceful Shutdown ─────────────────────────────────────────────────────────
-process.on("SIGTERM", () => {
-  console.log("📌 SIGTERM received. Closing server gracefully...");
-  server.close(() => {
-    console.log("🛑 Server closed");
-    process.exit(0);
+// ── Start Server (local development only) ────────────────────────────────────
+if (require.main === module) {
+  const PORT = process.env.PORT || 3000;
+  const server = app.listen(PORT, () => {
+    console.log(`Audiora Server started on http://localhost:${PORT}`);
   });
-});
+
+  process.on("SIGTERM", () => {
+    server.close(() => process.exit(0));
+  });
+}
 
 module.exports = app;
 
