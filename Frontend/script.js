@@ -4,7 +4,7 @@
 // ============================================================
 
 // API Config — always use backend server for consistency
-var API_BASE_URL = 'http://localhost:3000/api';
+var API_BASE_URL = '/api';
 
 // ── App State ────────────────────────────────────────────────
 let currentTrack = null;
