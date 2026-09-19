@@ -1,13 +1,17 @@
 {
-  "rewrites": [
+  "installCommand": "npm install",
+  "routes": [
     {
-      "source": "/",
-      "destination": "/Frontend/index.html"
+      "src": "/api/(.*)",
+      "dest": "/api/[...path].js"
     },
     {
-      "source": "/:path*",
-      "destination": "/Frontend/:path*"
+      "src": "/",
+      "dest": "/Frontend/index.html"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/Frontend/$1"
     }
-  ],
-  "installCommand": "npm install"
+  ]
 }
