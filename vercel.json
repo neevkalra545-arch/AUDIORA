@@ -8,5 +8,6 @@
       "source": "/:path*",
       "destination": "/Frontend/:path*"
     }
-  ]
+  ],
+  "installCommand": "npm install"
 }
